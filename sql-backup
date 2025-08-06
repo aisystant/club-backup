@@ -1,9 +1,15 @@
 #!/bin/bash
 
-
-
 SRC_DIR=/var/discourse/shared/standalone/backups/
-DST_DIR="
+DST_DIR=""
+
+# read .env file
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+else
+    echo ".env file not found!"
+    exit 1
+fi
 
 echo "Test backup s3"
 echo "Test env:"
