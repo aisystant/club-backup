@@ -1,3 +1,8 @@
 #!/bin/bash
 
 echo "Test backup s3"
+echo "Test env:"
+
+env
+
+echo "Check the RSYNC_DST=$RSYNC_DST and SFTP_DST=$SFTP_DST variables"
