@@ -1,0 +1,3 @@
+# /var/spool/cron/crontabs/cehovoy
+30 3 * * * cd /home/cehovoy/club-backup && ./s3-backup >> /home/cehovoy/club-backup/backup.log 2>&1
+30 4 * * * cd /home/cehovoy/club-backup && ./sql-backup >> /home/cehovoy/club-backup/backup.log 2>&1
