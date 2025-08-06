@@ -1,8 +1,5 @@
 #!/bin/bash
 
-SRC_DIR=/var/discourse/shared/standalone/backups/
-DST_DIR=""
-
 # read .env file
 if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
@@ -17,3 +14,14 @@ echo "Test env:"
 env
 
 echo "Check the RSYNC_DST=$RSYNC_DST and SFTP_DST=$SFTP_DST variables"
+
+if [ -z "$RSYNC_DST" ]; then
+    echo "RSYNC_DST is not set in .env file!"
+    exit 1
+fi
+
+SRC=/var/discourse/shared/standalone/backups/
+DST=$RSYNC_DST
+
+echo "DRY RUN: rsync -avz $SRC $DST"
+#rsync -avz $SRC $DST
