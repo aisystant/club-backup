@@ -1,0 +1,1 @@
+50 6 * * * /home/cehovoy/club-backup/s3-backup.sh >> /home/cehovoy/club-backup/backup.log 2>&1
