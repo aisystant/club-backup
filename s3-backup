@@ -8,9 +8,61 @@ else
     exit 1
 fi
 
-echo "Test backup s3"
-echo "Test env:"
+echo "S3 to rsync.net backup"
 
-env
+# Check required variables
+if [ -z "$RSYNC_NET_S3_MOUNTDIR" ]; then
+    echo "RSYNC_NET_S3_MOUNTDIR is not set in .env file!"
+    exit 1
+fi
 
-echo "Check the RSYNC_DST=$RSYNC_DST and SFTP_DST=$SFTP_DST variables"
+if [ -z "$S3_BUCKET" ]; then
+    echo "S3_BUCKET is not set in .env file!"
+    exit 1
+fi
+
+if [ -z "$RSYNC_NET_SERVER" ]; then
+    echo "RSYNC_NET_SERVER is not set in .env file!"
+    exit 1
+fi
+
+if [ -z "$RSYNC_NET_S3_SUBDIR" ]; then
+    echo "RSYNC_NET_S3_SUBDIR is not set in .env file!"
+    exit 1
+fi
+
+echo "S3_BUCKET=$S3_BUCKET"
+echo "RSYNC_NET_S3_MOUNTDIR=$RSYNC_NET_S3_MOUNTDIR"
+
+# Check if rclone is configured for S3
+if ! rclone config show s3 &>/dev/null; then
+    echo "rclone S3 remote 's3' not configured!"
+    echo "Please run: rclone config"
+    echo "And configure an S3 remote named 's3'"
+    exit 1
+fi
+
+# Check if mount point exists and is mounted
+if ! mountpoint -q "$RSYNC_NET_S3_MOUNTDIR"; then
+    echo "Mounting $RSYNC_NET_SERVER:$RSYNC_NET_S3_SUBDIR to $RSYNC_NET_S3_MOUNTDIR"
+    
+    # Create mount point if it doesn't exist
+    if [ ! -d "$RSYNC_NET_S3_MOUNTDIR" ]; then
+        sudo mkdir -p "$RSYNC_NET_S3_MOUNTDIR"
+    fi
+    
+    # Mount using sshfs
+    sshfs -o IdentityFile=~/.ssh/rsync_net_key "$RSYNC_NET_SERVER:$RSYNC_NET_S3_SUBDIR" "$RSYNC_NET_S3_MOUNTDIR"
+    
+    if [ $? -ne 0 ]; then
+        echo "Failed to mount $RSYNC_NET_SERVER:$RSYNC_NET_S3_SUBDIR"
+        exit 1
+    fi
+    echo "Successfully mounted!"
+else
+    echo "$RSYNC_NET_S3_MOUNTDIR is already mounted"
+fi
+
+# Sync S3 bucket to rsync.net mounted directory
+echo "DRY RUN: rclone sync s3:$S3_BUCKET $RSYNC_NET_S3_MOUNTDIR --progress --dry-run"
+#rclone sync s3:$S3_BUCKET $RSYNC_NET_S3_MOUNTDIR --progress
