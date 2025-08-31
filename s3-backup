@@ -1,33 +1,43 @@
 #!/bin/bash
 
-# read .env file
-if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
-else
-    echo ".env file not found!"
-    exit 1
-fi
+# Use environment variables directly
 
 echo "S3 to rsync.net backup"
 
 # Check required variables
 if [ -z "$RSYNC_NET_S3_MOUNTDIR" ]; then
-    echo "RSYNC_NET_S3_MOUNTDIR is not set in .env file!"
+    echo "RSYNC_NET_S3_MOUNTDIR is not set!"
+    ./send-telegram "❌ *S3 Backup Failed to Start*
+
+💥 Error: RSYNC_NET_S3_MOUNTDIR is not set!
+🔧 Action: Please set RSYNC_NET_S3_MOUNTDIR environment variable" mention
     exit 1
 fi
 
 if [ -z "$S3_BUCKET" ]; then
-    echo "S3_BUCKET is not set in .env file!"
+    echo "S3_BUCKET is not set!"
+    ./send-telegram "❌ *S3 Backup Failed to Start*
+
+💥 Error: S3_BUCKET is not set!
+🔧 Action: Please set S3_BUCKET environment variable" mention
     exit 1
 fi
 
 if [ -z "$RSYNC_NET_SERVER" ]; then
-    echo "RSYNC_NET_SERVER is not set in .env file!"
+    echo "RSYNC_NET_SERVER is not set!"
+    ./send-telegram "❌ *S3 Backup Failed to Start*
+
+💥 Error: RSYNC_NET_SERVER is not set!
+🔧 Action: Please set RSYNC_NET_SERVER environment variable" mention
     exit 1
 fi
 
 if [ -z "$RSYNC_NET_S3_SUBDIR" ]; then
-    echo "RSYNC_NET_S3_SUBDIR is not set in .env file!"
+    echo "RSYNC_NET_S3_SUBDIR is not set!"
+    ./send-telegram "❌ *S3 Backup Failed to Start*
+
+💥 Error: RSYNC_NET_S3_SUBDIR is not set!
+🔧 Action: Please set RSYNC_NET_S3_SUBDIR environment variable" mention
     exit 1
 fi
 
@@ -39,6 +49,10 @@ if ! rclone config show s3 &>/dev/null; then
     echo "rclone S3 remote 's3' not configured!"
     echo "Please run: rclone config"
     echo "And configure an S3 remote named 's3'"
+    ./send-telegram "❌ *S3 Backup Failed to Start*
+
+💥 Error: rclone S3 remote 's3' not configured!
+🔧 Action: Please run \`rclone config\` and configure an S3 remote named 's3'" mention
     exit 1
 fi
 
@@ -56,6 +70,10 @@ if ! mountpoint -q "$RSYNC_NET_S3_MOUNTDIR"; then
     
     if [ $? -ne 0 ]; then
         echo "Failed to mount $RSYNC_NET_SERVER:$RSYNC_NET_S3_SUBDIR"
+        ./send-telegram "❌ *S3 Backup Failed to Start*
+
+💥 Error: Failed to mount $RSYNC_NET_SERVER:$RSYNC_NET_S3_SUBDIR
+🔧 Action: Check SSH key permissions and rsync.net connectivity" mention
         exit 1
     fi
     echo "Successfully mounted!"
@@ -63,6 +81,36 @@ else
     echo "$RSYNC_NET_S3_MOUNTDIR is already mounted"
 fi
 
+# Send start notification
+./send-telegram "🚀 *S3 Backup Started*
+
+📦 Bucket: \`$S3_BUCKET\`
+📁 Destination: \`$RSYNC_NET_S3_MOUNTDIR\`
+🔄 Status: Starting backup process..."
+
 # Sync S3 bucket to rsync.net mounted directory
 echo "DRY RUN: rclone sync s3:$S3_BUCKET $RSYNC_NET_S3_MOUNTDIR --progress --dry-run"
-#rclone sync s3:$S3_BUCKET $RSYNC_NET_S3_MOUNTDIR --progress
+
+# Capture output and exit code
+RCLONE_OUTPUT=$(rclone sync s3:$S3_BUCKET $RSYNC_NET_S3_MOUNTDIR --progress --dry-run 2>&1)
+RCLONE_EXIT_CODE=$?
+
+if [ $RCLONE_EXIT_CODE -eq 0 ]; then
+    ./send-telegram "✅ *S3 Backup Completed Successfully*
+
+📦 Bucket: \`$S3_BUCKET\`
+📁 Destination: \`$RSYNC_NET_S3_MOUNTDIR\`
+✨ Status: Backup completed without errors
+🔍 Mode: DRY RUN"
+else
+    ./send-telegram "❌ *S3 Backup Failed*
+
+📦 Bucket: \`$S3_BUCKET\`
+📁 Destination: \`$RSYNC_NET_S3_MOUNTDIR\`
+💥 Exit Code: $RCLONE_EXIT_CODE
+📝 Error Output:
+\`\`\`
+$RCLONE_OUTPUT
+\`\`\`" mention
+    exit $RCLONE_EXIT_CODE
+fi

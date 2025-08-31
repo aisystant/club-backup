@@ -45,6 +45,9 @@ RSYNC_NET_SERVER=             # Username@server for mounting (e.g. 123@tv-s009.r
 S3_BUCKET=                    # Your S3 bucket name
 RSYNC_NET_S3_MOUNTDIR=        # Local mount point (e.g. /mnt/rsync-s3)
 RSYNC_NET_S3_SUBDIR=          # Remote directory on rsync.net (e.g. s3-backups)
+TELEGRAM_BOT_TOKEN=           # Telegram bot token for notifications
+TELEGRAM_CHAT_ID=             # Telegram chat ID for notifications
+TELEGRAM_MENTIONS=            # Optional: @username mentions for alerts (e.g. "@admin @user")
 ```
 
 ## rclone Configuration
@@ -56,3 +59,36 @@ rclone config
 ```
 
 Create a remote named 's3' with your S3 credentials.
+
+## Telegram Setup
+
+To receive backup notifications via Telegram:
+
+1. Create a Telegram bot:
+   - Message @BotFather on Telegram
+   - Send `/newbot` and follow instructions
+   - Copy the bot token
+
+2. Get your chat ID:
+   - Start a chat with your bot
+   - Send a message to the bot
+   - Visit: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
+   - Find your chat ID in the response
+
+3. Add the values to your `.env` file:
+   ```bash
+   TELEGRAM_BOT_TOKEN=your_bot_token_here
+   TELEGRAM_CHAT_ID=your_chat_id_here
+   ```
+
+## Usage
+
+Test Telegram notifications:
+```bash
+./send-telegram "Test message"
+```
+
+Run S3 backup with notifications:
+```bash
+./s3-backup
+```
